@@ -1,0 +1,485 @@
+Notes
+================================================================================
+
+Subsumption
+--------------------------------------------------------------------------------
+
+If p1 subsumes p2 it needs to be sorted so that it comes later.
+
+
+First Example
+--------------------------------------------------------------------------------
+
+(match [x y z]
+  [_     false true ] 1
+  [false true  _    ] 2
+  [_     _     false] 3
+  [_     _     _    ] 4)
+
+
+Heuristics
+--------------------------------------------------------------------------------
+
+First Row
+
+f(i) = 0 if _
+f(i) = 1 otherwise
+
+Small default
+
+-v(i) where i equal number of wildcard patterns in column i
+
+b(i) branching factor - negative number of switch nodes
+
+a(i) negation of the sum of the arities
+
+l(i) number of children of the emitted switch
+
+r(i)
+
+q constructor prefix
+
+qba
+
+q 1) avoid usefulness computations, 2) avoid pattern copies
+  p(j i) is a generalized constructor pattern test
+
+Hmm sounds like we don't need to do usefulness checks with qba?
+
+
+Useless clauses
+--------------------------------------------------------------------------------
+
+Subsumption checks to delete rows, before the subsumption check as well.
+
+If we can throw away redundant checks and move forward
+good. Non-exhaustiveness is not really something we care about that
+much - I don't think. People either added the default handler or their
+didn't.
+
+Series of examples are excellent at the end of "Warnings for pattern
+matching", should definitely work against these.
+
+Reducing necessity to usefulness.
+
+type mylist = Nil | One of int | Cons of int * mylist
+
+
+New Thoughts
+--------------------------------------------------------------------------------
+
+| x (isa? x A) _            _ |
+| _            y (isa? y B) _ |
+| x (isa? x C) y (isa? y C) 0 | x :guards [(isa? x D)]
+
+*{0}
+
+If there are guards remaining on x that's another pattern matrix, other people
+might use that guard as well, if it's an isa? or = check we can save space.
+
+During compilation we could just use an atomic integer to associate an id with
+a particular class when *compile-files*
+
+
+Thoughts
+--------------------------------------------------------------------------------
+
+We're going to have to spend a couple of days just sorting out an
+optimal data representation.
+
+
+Design
+--------------------------------------------------------------------------------
+
+Interesting case:
+
+[x y] :guard [(odd? x) (even? y)] :one
+[x 0]                             :two
+[0 y] :guard [(odd? y)]           :three
+[_ _]                             :four
+
+As matches are added we'll need to recompute the optimal matrix. We'll need to
+consider how to make this fast, as well what we can do minimize the
+work.
+
+  Step1
+  --------------------
+  [x y] :guard [(odd? x) (even? y)] :one
+
+  {:guards {[0] [(odd? x)]
+            [1] [(even? y)]}
+   :patterns [{:arglist [x y] :guard [(odd? x) (even? y)]}]
+   :start 1
+   :dag {0 ::no-method
+         1 {:test (odd? x)
+            :edges {true 2 false 0}}
+         2 {:test (odd? y)
+            :edges {true 3 fales 0}}
+         3 :one}}
+
+  Step2
+  --------------------
+  [x 0] :two
+
+  {:guards {[0] [(odd? x)]
+            [1] [(even? y)]}
+   :patterns [{:arglist [x y] :guard [(odd? x) (even? y)]}
+              {:arglist [x 0]}]
+   :start 1
+   :dag {0 ::no-method
+         1 {:test (odd? x)
+            :edges {true 4 false 0}}
+         2 {:test (odd? y)
+            :edges {true 3 false 0}}
+         3 :one
+         4 {:test y
+            :edges {0 5 ::default 2}}
+         5 :two}}
+
+  We need something like insert-node, which will shift a node.
+
+  Step3
+  --------------------
+  [0 y] :guard [(odd? y)] :three
+
+  {:guards {[0] [(odd? x)]
+            [1] [(even? y)]
+            [1] [(odd? y)]}
+   :patterns [{:arglist [x y] :guard [(odd? x) (even? y)]}
+              {:arglist [x 0]}
+              {:arglist [0 y] :guard [(odd? y)]}]
+   :start 6
+   :dag {0 ::no-method
+         1 {:test (odd? x)
+            :edges {true 4 false 0}}
+         2 {:test (odd? y)
+            :edges {true 3 false 0}}
+         3 :one
+         4 {:test y
+            :edges {0 5 ::default 2}}
+         5 :two
+         6 {:test x
+            :edges {0 7 ::default 1}}
+         7 :three}}
+
+  We'll have to rewrite parts of the graph, but that means we'll
+  have to the parts of the graph that return.
+
+  Step 4
+  --------------------
+  [_ _] :four
+
+  {:guards {[0] [(odd? x)]
+            [1] [(even? y)]
+            [1] [(odd? y)]}
+   :patterns [{:arglist [x y] :guard [(odd? x) (even? y)]}
+              {:arglist [x 0]}
+              {:arglist [0 y] :guard [(odd? y)]}
+              {:arglist [_ _]}]
+   :start 6
+   :dag {0 :four
+         1 {:test (odd? x)
+            :edges {true 4 false 0}}
+         2 {:test (odd? y)
+            :edges {true 3 false 0}}
+         3 :one
+         4 {:test y
+            :edges {0 5 ::default 2}}
+         5 :two
+         6 {:test x
+            :edges {0 7 ::default 1}}
+         7 :three}}
+  
+We still haven't considered the problem of necessity. This really feels
+like we something *before* the dag, that we can use to generate the
+dag.
+
+  | (odd? x) (even? y) |
+  | x        0         |
+  | 0        (odd? y)  |
+  | _        _         |
+
+Aha. The column representing is actually better!
+
+  | 0        (odd? y)  |
+  | (odd? x) (even? y) |
+  | x        0         |
+  | _        _         |
+
+We should put the example from Efficient Predicate Dispatch into this
+format.
+
+When there is an internal access, should just be considered as another column?
+
+  | 0         _  (odd? y)  |
+  | (odd? x)  _  (even? y) |
+  | x         _  0         |
+  | (A. y)    y  _         |
+  | _         _  _         |
+  
+User defines the following method
+
+  (defm foo [x] :guard [(even? x)]
+    :two)
+
+We now have a new method in the method-table called myns/foo, this
+method entry will look like the following:
+
+  {:guards {[0] [(even? x)]}
+   :patterns [{:arglist [x] :guard [(even? x)]}]
+   :start 0
+   :dag {0 ::no-method
+         1 {:test even?
+            :edges {true 1 false -1}}
+         2 :two}}
+
+User then defines the following addition to the method
+
+  (defm foo [0] :one)
+
+This will update the method entry in the table it should now look like
+the following:
+
+  {:guards {[0] [(even? x)]}
+   :patterns [{:arglist [x] :guard [(even? x)]}
+              {:arglist [0]}]
+   :start 2
+   :dag {-1 ::no-method
+          0 {:test (even? x)
+             :edges {true 1 false -1}}
+          1 :two
+          2 {:test x
+             :edges {0 3 false 0}}
+          3 :one}}
+          
+This works for the simple case, but what if the reordering happens in
+the middle?
+
+  (defm foo [4]
+    :three)
+
+This isn't a problem as this is just another equality test:
+
+  {:guards {[0] [(even? x)]}
+   :patterns [[x] [0] [4]]
+   :start 2
+   :dag {-1 ::no-method
+          0 {:test (even? x)
+             :edges {true 1 false -1}}
+          1 :two
+          2 {:test x
+             :edges {0 3 4 4 false 0}}
+          3 :one
+          4 :three}}
+
+So this is pretty easy to deal with.
+
+Can we think of a situation that would actually cause a reordering
+that we would want to handle? Can't really think of any cases that
+involve Clojure.
+
+  [(A. 0)] 
+  [(B. 0)] 
+  [(C. 0)]
+
+  A -> B -> C hierarchy
+
+Concrete type matches are not a problem, they're always more
+specific.
+
+  [x] :guard (isa x IFoo)
+  [x] :guard (isa x IBar)
+
+  x is A which implement IFoo and IBar
+
+If we know the type of x we can point out the ambiguity.
+
+At the bottom the user could add, after :where,
+
+  :prefers [[IBar IFoo]]
+
+I don't suppose this'll be any worse then 
+
+
+Ideas
+--------------------------------------------------------------------------------
+
+In the cases where one branch has many more tests, I guess a cascade
+of cases still wins out really over if
+
+  (supers (class 0))
+  #{java.lang.Number java.io.Serializable java.lang.Object
+  java.lang.Comparable}
+
+This is incredibly useful information for dispatching.
+  
+
+Issues
+--------------------------------------------------------------------------------
+
+Getting a specific method. Not sure how important this is, we would want to
+preserve the destructuring perhaps? Or maybe you get a function that
+is closed over the arguments that you gave to it? A method signature
+is its pattern and it's guard
+
+
+Algorithm
+--------------------------------------------------------------------------------
+
+patterns are two things, a type and a series of bindings. Unlike
+destructuring in Clojure, we want to differentiate between things we
+want to treat as sequences and things that are of fixed length.
+
+() ; always represents fixed length sequences, ISeq + count
+[] ; the usual clojure interpretation, ISeq
+{} ; the usual clojure interpretation, IMap
+(A. f1 f2 ...) ; field syntax
+
+We test the arguments in order, we grab all the tests for the first
+argument organized by the method they dispatch on. The pattern plus
+the normalized guard is the unique key (we should probably check for
+alpha equivalence) for each method.
+
+We could also use the strategy outlined by the OCaml paper, using the
+concept of the necessity. The math is a bit thick in that paper, would
+need some help?
+
+
+Pattern Matrix
+--------------------------------------------------------------------------------
+
+In the map there is a (n x m) matrix - but our tests are not just (n x
+m), some patterns may require more matches since we have guards. Need
+to read the paper several more times to suss out it's meaning, the
+mathematics is not very complicated. It's mostly a notation to
+simplify the description w/o getting into the details of OCaml.
+
+  P1.1 P1.2
+  P2.1 P2.2
+  P3.1 P3.2
+
+Perhaps best if all tests are considered as one particular
+pattern. Different kinds of tests are given a different priority.
+
+  P.1.1 = (and (type Foo a) (= (:x a) 0))
+  P.2.1 = (and (type Bar a) (= (:y a) 1))
+  P.3.1 = (and (type Foo a) (even? (:x a) 0))
+  
+There's recursive stuff going on here. P1.1 and P3.1 kind of represent
+a sub-decision tree.
+
+
+Heuristinc & Scoring
+--------------------------------------------------------------------------------
+
+f = score constructors 1
+v(i) = score wilcard occurrences as -v(i)
+
+
+Integration with a Type System
+--------------------------------------------------------------------------------
+
+Hmm, it would be interesting to use the logic engine to store a
+database of facts as your declaring you're defining your program and
+emit type warnings. We would even have to interfere with the compiler,
+we'd simply run a clojure parser on the body and run the type
+inference. The fact that definitions have to be defined in a specific
+order really simplifies the type checking problem.
+
+
+Racket
+--------------------------------------------------------------------------------
+
+Racket supports recursive pattern, this is interesting. Steps towards
+Datalog yet again?
+
+A big benefit of the inability to have circular references in Clojure
+is completely avoid the infinite loop issue.
+
+Classes/Interfaces/Protocols - many possible branches
+boolean tests - 2 branches
+
+[x y]
+
+A (> x 1)
+B (= x :foo)
+C A
+
+What other things would people want to dispatch on that are
+legitimately multiway?
+
+structural matching, whatever the defrecord literal becomes when it comes.
+
+(A. 1 2)
+
+[{:keys [a b] :as b}] :guard ....
+
+The problem here that we have a two steps.
+
+for things which we know are types, we can emit case
+for things which we know are ad-hoc, we can emit condp isa?
+
+
+Use cases
+--------------------------------------------------------------------------------
+
+We would like to know that the following expressions are equivalent.
+
+(= (:foo x) 'a)
+(= (:foo x) 'b)
+(= 'c (:foo x))
+(= 'd (:foo x))
+
+If we know they are then we can setup a multiway branch again.
+
+This simple case can definitely be handled.
+
+We could support Racket like things.
+
+(? every? even? foo)
+
+
+Predicate Dispatch
+--------------------------------------------------------------------------------
+
+[{f1x :x f1y :y :as f1} {f2x :x f2y :y :as f2}] :guard [(isa? f1 A)
+                                                        (isa? f1x A)
+                                                        (not (isa? B f1))
+                                                        (isa? f2x C)
+                                                        (= f1y f2y)]
+
+[{f1x :x :as f1} f2] :guard [(isa? f1 B) (isa? f1x B)]
+[{f1x :x :as f1} f2] :guard [(isa? f1 C) (isa? f2 A) (isa? f1x B)]
+[f1 f2] :guard [(isa? f1 C) (isa? f2 C)]
+[f1 _] :guard [(isa? f1 C)]
+
+| f1#A f2   |
+| f1#B f2   |
+| f1#C f2#A |
+| f1#C f2#C |
+| f1#C f2   |
+
+NOTE: how to deal with multiple isa? on a subterm? (isa? x B) (isa? x A)
+
+column 1 is clear the most important since it tests for type in all cases
+
+This is actually much simpler than what is suggested in the Efficient
+Predicate Dispatch paper, if f1#A is selected we don't need to use
+those tests anywhere else, we can can remove predicates as we
+specialize and if there are no other matches, we can just destructure
+and run the remaining bits?
+
+Same for B
+
+For C we actually have some legitimate tests
+
+
+Issues
+-----------------------------------------------------------------------------
+
+One thing that is tough is recovering the method. 
+
+(get-method foo [0 1])
+
+Should return the method that matches the particular argument
+list. Need to think about this.
