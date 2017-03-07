@@ -41,11 +41,6 @@ really really what's the difference
   - decide which are worth
   - top down 
   - optimize in memory
-  - 
-    
-
-  
-
 
 
 ** GOC/opening Message to David
@@ -100,7 +95,7 @@ really really what's the difference
   also get's compilied????
 does that looks like?
 - what are cases from Special matrix?
-- pseudo-pattern are func app :<< and :or patterns 
+
 ** question about the paper
 - what does he means by head constructor?
 - what make a set of constructors a complete signature?
@@ -172,8 +167,17 @@ itself (huh?), and how to produce specialize-matrix
   the (if test), we have FailNode, LeafNode, BindNode [which does do much,
   delegate the other two nodes), that gives us
   something when (n-to-clj ) hmm, food for thought....
-- 
-    
+- pseudo-pattern are func app :<< and :or patterns, we expand the
+  matrix on it.
+- when we expand on Orpattern, we introduce extra rows
+  but when we expand on appPattern we introduce new occurence to the
+  matrix, with {:bind-expr ~(form first-occ)
+- so groupable is being used for checking if two pattern are equal,
+  hmm.
+- So to match against appPatern, we introduce  a new occurence, apply
+  the form to it, and then change each row such that we add a new
+  wild-card pattern after the patern to match kinda always match, let
+  the scoring system takes care of it. 
 *** deftypes: [patterns]
    PatternRow 
    WildcardPattern 
@@ -203,3 +207,4 @@ itself (huh?), and how to produce specialize-matrix
 - understand ISpecializeMatrix
 - get to the bottom of *recur-present*!
 ** read the code 
+
