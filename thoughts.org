@@ -1,0 +1,205 @@
+* CLOJURE/GCOS
+backtracing pre-allocated exceptions.   
+javascript cost of throwing exceptions.
+
+-> compile to a loop + jump table (case)
+
+code code generation for more targets
+
+all based on scoring columns 
+
+predicate dispatch/ open extension. 
+
+- reorder the tests
+- add new pattern type.
+- sequences (only head & tail)
+- heade & tail
+- extract pattern matrix
+  each row values/to match against them
+
+- find which expression should be first tested & reorder the test
+- pattern type [ pass all rows that match] 
+
+** to understand
+- [x] backtracing pre-allocated exceptions.
+- how case work/ -> compiling 
+- [x] sometimes we use defrecord, and sometimes deftype, 
+really really what's the difference 
+** notes
+*** NYC clojure meetup:  https://vimeo.com/27860102
+- dispatching on type.
+- extend the type.
+- dispatch on patterns...[structural mathcing]
+- extend pattern matching.
+- add disptaches after the fact, without modifiying the original code.
+- decision trees
+  (set pattern -> tree)  . moving through branching till hit leafs
+  
+  backtracking automata (retest cases)
+
+  lazy, only columns that must be tested will be tested
+  - decide which are worth
+  - top down 
+  - optimize in memory
+  - 
+    
+
+  
+
+
+
+** GOC/opening Message to David
+  Hello @David! First, I would really want to thank you for your work
+  on Clojure/Clojurescript (The Dream Machine.) It trully brings
+  inspiration. I have watched both of your talks on core.match, I've
+  also read the wiki and Maranget paper, though I need to read it many
+  times more. I'm also studying core.match code (compiling
+  notes/questions) I would really really love to have the privelege of
+  spending my full time thinking and working on it under your
+  mentorship. I'm 3rd (and last) year student (at U of Winnipeg,
+  Canada) though on school they didn't not expose us to FP (which is
+  sad), but luckily in the previous years I've had contact with LISP,
+  and it just made sense to how things ought to be. I've gone through
+  SICP last summer while laboring, and also through little schemer as
+  per your recommendation and HTDP before turning my attention
+  exclusively toward Clojure starting from previous December, though I
+  have played with it before and kept following the community.
+  core.match is awesome and I want to do my best and make it compile
+  better for Clojurescript under your mentorship. Thank you for
+  reading this. It all started with "syntactical daydreaming" :)  My
+  name is Sifou, my github is https://github.com/bsifou:  and I'm
+  https://twitter.com/bsifou_ on twitter.
+
+*** v2
+  Hello @dnolen! First, I would really want to thank you for your work
+  on Clojure/Clojurescript (The Dream Machine.) It truly brings
+  inspiration. I have watched both of your talks on core.match, I've
+  also read the wiki and Maranget paper, though I need to read it many
+  times more. I'm also studying core.match code (compiling
+  notes/questions) I would really really love to have the privilege of
+  spending my full time thinking and working on it under your
+  mentorship. I'm 3rd (and last) year student (at U of Winnipeg,
+  Canada) though on school they didn't not expose us to FP (which is
+  sad), but luckily in the previous years I've had contact with LISP,
+  and it just made sense to how things ought to be. I've gone through
+  SICP last summer while labouring, and also through little schemer as
+  per your recommendation and HTDP before turning my attention
+  exclusively toward Clojure starting from previous December, though I
+  have played with it before and kept following the community.
+  core.match is awesome and will be cool if it gets to compile better
+  for Clojurescript. Thank you for reading this. It all started with
+  "syntactical daydreaming" :)  My name is Sifou, my github is
+  https://github.com/bsifou, and I'm https://twitter.com/bsifou_ on
+  twitter.
+  
+** questions about the algorithm/general
+- how do we know, that a pattern actually
+  filter a value (occurence, how the code that
+  []*A* maybe when compiling the pattern in to something that goes into
+  an -if- & then the -then- part the specialize matrix result? which
+  also get's compilied????
+does that looks like?
+- what are cases from Special matrix?
+- pseudo-pattern are func app :<< and :or patterns 
+** question about the paper
+- what does he means by head constructor?
+- what make a set of constructors a complete signature?
+** questions about the code
+- so what occurences look like
+  they seem to be associated with matrix
+- on line 2070 in emmit-matrix we seem to process-vars twice?
+  it's local binding is _vs_
+- [x] if the ocr-expr is (+ 1 2) doest it become 3 when 
+  emmited,
+  *A* it doesn't. it get bound to ocr- in a let scope.
+- how it's made sure that width always return the width 
+of matrix, if rows are not of same length?, error?
+  *A* check-pattern takes care of it, called from
+  check-matrix-args, before compiling in clj-form
+- what's the nature of ps in pattern row, a vector?
+- why definterface, and not defprotocol
+  for IExistentialPattern, IPseudoPattern?
+  *A* to be able to ask instance? 
+- why MapKeyPattern, which is IExistentialPattern
+  get's score of 1, others gets 2?
+- why MapKEyPattern is a record and not a deftype, like 
+  the other patterns?
+- how can we signal that we have chosen a column and not take it
+  twice (in compile, :813)
+- patternRow takes bindings, what does that look like
+  [?] *A* maybe it's related to the as thing?, cause when specializing
+  we added it there 
+  I might need to see where it is created, (emmit somthing?)
+- when do the binding get applied (what func responsible for it),
+  before the pattern get's compiled (using the ocr) in an if test? 
+- where is the _cond_ that get produced by Switch node, i don't see it
+  in the macro-expansion
+  *A* Hmm! maybe because cond-> gets macro-expanded to bunch of if's
+  in when expanded!
+- LeafNode & BindNode why is there binding related stuff to LeafNode,
+  what does BindNode do then!!! 
+** thoughts on how to solve it    
+- somehow change the implemntatioon of  IPatternCompile
+  in each pattern? -- need to get back to the paper for that.
+- so you loop through the condidtates that comes out form
+  SpecializeMatrix (tests) when compiled those gets spit out as
+  clauses in SwitchNode and whichever works jump right to that
+  SwitchNode, I mean the output of it. 
+** observations
+- so pretty much every Pattern is a deftype?
+  but MapKeyPattern which is a record, why?  
+- so pretty much each pattern knows how to compile
+itself (huh?), and how to produce specialize-matrix
+(needs to clear that!)
+- when we create patternrow, binding is [] wtf! 
+- The cycle emit-pattern -> emit-pattern-for-syntax -> emit-pattenrs->
+  [loop again]
+- also for litteral-pattern gotta be qualified by *quote* in seq? How
+  is that!?
+- so we get one-to-one mapping from syntax to patterns objects
+  [patter[patttern] [pattern] -> patternrow
+- in seqPattern, it just compiles to (seq ocr) how to do you check 
+  that the pattern matches the damn thing (ocr?)
+- so IPatternCompile code gets stuck into an if test, hmm!
+- leaf-bind-expr, what a strange name, has to do with the occurence
+  and it's symbol and binding? (this is getting confusing!) 
+- so the switchNode is responsile for the (if (test [which is a
+  pattern compile)) and concatenating the the conds with (if :else
+  backtrack)
+- with recur, we use backtrack, without we somehow get to use
+  default!!! [the who thing is muddy!)
+- actions must implement INodeCompile protocol they come right after
+  the (if test), we have FailNode, LeafNode, BindNode [which does do much,
+  delegate the other two nodes), that gives us
+  something when (n-to-clj ) hmm, food for thought....
+- 
+    
+*** deftypes: [patterns]
+   PatternRow 
+   WildcardPattern 
+   LiteralPattern 
+   SeqPattern
+   MapPattern
+   VectorPattern
+   OrPattern 
+   GuardPattern 
+   AppPattern
+   PredicatePattern
+*** defrecords [Nodes]
+    LeafNode
+    FailNode
+    BindNode 
+    SwitchNode 
+    PatternMatrix
+    RestPattern
+    MapKeyPattern
+
+
+** TODO
+- map the macro exampnd result to graph
+- continue reading source code, from pattern emmiting till the compilation
+- locate where we are using 
+- understand what emit-pattern really does, check the wiki
+- understand ISpecializeMatrix
+- get to the bottom of *recur-present*!
+** read the code 
