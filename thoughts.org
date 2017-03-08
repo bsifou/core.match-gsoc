@@ -177,7 +177,11 @@ itself (huh?), and how to produce specialize-matrix
 - So to match against appPatern, we introduce  a new occurence, apply
   the form to it, and then change each row such that we add a new
   wild-card pattern after the patern to match kinda always match, let
-  the scoring system takes care of it. 
+  the scoring system takes care of it.
+- this whole thing, where we have types, to make new type values from
+  previous, we have to do destructring, but because we are using
+  custom type values we have to destructre everything by hand, no
+  clojure support ;-)  Feels lot like Racket, feels good :) 
 *** deftypes: [patterns]
    PatternRow 
    WildcardPattern 
@@ -198,7 +202,6 @@ itself (huh?), and how to produce specialize-matrix
     RestPattern
     MapKeyPattern
 
-
 ** TODO
 - map the macro exampnd result to graph
 - continue reading source code, from pattern emmiting till the compilation
@@ -206,5 +209,35 @@ itself (huh?), and how to produce specialize-matrix
 - understand what emit-pattern really does, check the wiki
 - understand ISpecializeMatrix
 - get to the bottom of *recur-present*!
-** read the code 
+*** read the code 
+** what I've done today:
+- <2017-03-06 Mon>
+  - I've understood what it means to expand matrix
+- <2017-03-07 Tue>
+  - read-up more on prtocols, multimethods, pholymorphism...
+  - java/clojure got more details pinned down.
+<2017-03-08 Wed>
+ - more on polymorphism, protocols quicrks... (we use them heavily
+   here)
+ - proxy/reify once and for all... (hopefully)
 
+** related-question on clojure
+- Why when we implemented Clojure.lang.IpresistentCollection we only
+ implemented (cons, equiv) but not empty and count, even though we've
+  implemented cons, we can't use it... we have to use conj. And also
+  if if we implement count even without using seq in our
+  implementation we must also implement seq? Why is that!
+- Why we can extend some part of protocol/interface?
+
+- what is proxy class/ and how it relates to the one in Java.. hmm..
+
+
+* Plan
+  - finish proxy stuff/ (1 hour)
+  - read the code/paper/think.... (2 - 3 hours)
+  - read the book [1:30 hours ]
+  - solve some more of 4clojure [1 hour] 
+  - finish reading arcticles and stuff on clojure... [45 minutes]
+  - get back to core.match and start writing proposal... / prepare
+    what to discuss with David
+- rescue: CLOJURE-PILLS / CHECK TO-WATCH/LISTEN /music/ economist/ 
