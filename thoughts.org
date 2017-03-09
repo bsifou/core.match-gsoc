@@ -206,9 +206,13 @@ itself (huh?), and how to produce specialize-matrix
 - map the macro exampnd result to graph
 - continue reading source code, from pattern emmiting till the compilation
 - locate where we are using 
-- understand what emit-pattern really does, check the wiki
-- understand ISpecializeMatrix
+-[x] understand what emit-pattern really does, check the wiki
+-[x] understand ISpecializeMatrix/ still need to check it for other
+  patterns though! 
+
 - get to the bottom of *recur-present*!
+
+
 *** read the code 
 ** what I've done today:
 - <2017-03-06 Mon>
@@ -220,7 +224,9 @@ itself (huh?), and how to produce specialize-matrix
  - more on polymorphism, protocols quicrks... (we use them heavily
    here)
  - proxy/reify once and for all... (hopefully)
-
+ - clarified the stuff :) great thread
+   https://groups.google.com/forum/#!msg/clojure/pZFl8gj1lMs/qVfIjQ4jDDMJ
+   
 ** related-question on clojure
 - Why when we implemented Clojure.lang.IpresistentCollection we only
  implemented (cons, equiv) but not empty and count, even though we've
@@ -231,13 +237,32 @@ itself (huh?), and how to produce specialize-matrix
 
 - what is proxy class/ and how it relates to the one in Java.. hmm..
 
-
+** to discuss with David
+   - ask him about recur
+   - provide for him a description of how all things fit together,
+     and if I have understood wrong
+   - suggest if it's possible to do incremental updates, where we
+     start with a simple pattern, support for it the loop compilation
+     before moving to others.
+   - give a comparison of how the code expands now, and how it should
+     after implementing this feature/ also provide pictorial *graph* as
+     per the paper. 
+   - get suggestion from him of other resources to read/still from
+   - 
 * Plan
-  - finish proxy stuff/ (1 hour)
+  [x]- finish proxy stuff/ (1 hour)
   - read the code/paper/think.... (2 - 3 hours)
-  - read the book [1:30 hours ]
+  -[x...] read the book [1:30 hours ] 
   - solve some more of 4clojure [1 hour] 
-  - finish reading arcticles and stuff on clojure... [45 minutes]
+  [x] finish reading arcticles and stuff on clojure... [45 minutes]
   - get back to core.match and start writing proposal... / prepare
     what to discuss with David
+
 - rescue: CLOJURE-PILLS / CHECK TO-WATCH/LISTEN /music/ economist/ 
+  
+* Insigths/day
+  we are on a race, and the only way to get ahead, is to learn (get
+  used) to lead
+  and not follow.
+  
+  

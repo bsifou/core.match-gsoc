@@ -8,7 +8,8 @@
 
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/tools.analyzer.jvm "0.6.5"]
-                 [org.clojure/clojurescript "0.0-2496" :scope "provided"]]
+                 [org.clojure/clojurescript "0.0-2496" :scope "provided"]
+                 [org.clojure/core.match "0.3.0-alpha4"]]
 
   :plugins [[lein-cljsbuild "1.0.4-SNAPSHOT"]
             [cider/cider-nrepl "0.14.0"]]
