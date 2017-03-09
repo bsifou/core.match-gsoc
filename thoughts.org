@@ -139,7 +139,27 @@ of matrix, if rows are not of same length?, error?
 - so you loop through the condidtates that comes out form
   SpecializeMatrix (tests) when compiled those gets spit out as
   clauses in SwitchNode and whichever works jump right to that
-  SwitchNode, I mean the output of it. 
+  SwitchNode, I mean the output of it.
+- David advised me to think about data rep of the patterns, to somehow
+  plug that before code generation, which means I have to
+- we have clojure code -> deftypes (patterns matrix) -> algorithm (compile |
+  nodes) -> nodes (deftypes)  -> /maybe need a middle step? (data)/ -> clojure code [to be replace]
+
+  (we have to replace the code generation step)
+
+- can we use (crazy) clojure.anayser and extend it or something! I
+  mean in the since we are feeding clojure data there!
+
+- According to the presentation I've watched what it does is: (halgari)
+  - clojure code (s-expressoin) -> data represetation -> manipulate
+    and stufff (they call them analyser passes)->
+    to-clj -> coljre code again (templating) 
+
+** to consult:
+   - some data stuff talk (maybe Rich)
+   - htdp, has something nice to say about data (check how things done
+     there) (Racket maybe)
+   - rich hicky talk (about clojure pro to pro (or somehting like that...)
 ** observations
 - so pretty much every Pattern is a deftype?
   but MapKeyPattern which is a record, why?  
@@ -261,8 +281,11 @@ itself (huh?), and how to produce specialize-matrix
 - rescue: CLOJURE-PILLS / CHECK TO-WATCH/LISTEN /music/ economist/ 
   
 * Insigths/day
-  we are on a race, and the only way to get ahead, is to learn (get
+-   we are on a race, and the only way to get ahead, is to learn (get
   used) to lead
   and not follow.
   
-  
+- I need to look ahead, how the thing should look like, kinda of
+  moving forward & then working my way backward.   
+
+-
