@@ -1,3 +1,4 @@
+
 * CLOJURE/GCOS
 backtracing pre-allocated exceptions.   
 javascript cost of throwing exceptions.
@@ -20,6 +21,7 @@ predicate dispatch/ open extension.
 - find which expression should be first tested & reorder the test
 - pattern type [ pass all rows that match] 
 
+  
 ** to understand
 - [x] backtracing pre-allocated exceptions.
 - how case work/ -> compiling 
@@ -41,7 +43,6 @@ really really what's the difference
   - decide which are worth
   - top down 
   - optimize in memory
-
 
 ** GOC/opening Message to David
   Hello @David! First, I would really want to thank you for your work
@@ -133,8 +134,58 @@ of matrix, if rows are not of same length?, error?
   in when expanded!
 - LeafNode & BindNode why is there binding related stuff to LeafNode,
   what does BindNode do then!!! 
+
+- !!! when do we get a vector of matrixes that get passed to `cases` when
+  we split the matrix? 
+
+** to discuss with David
+   - ask him about recur
+   - provide for him a description of how all things fit together,
+     and if I have understood wrong
+   - suggest if it's possible to do incremental updates, where we
+     start with a simple pattern, support for it the loop compilation
+     before moving to others.
+   - give a comparison of how the code expands now, and how it should
+     after implementing this feature/ also provide pictorial *graph* as
+     per the paper. 
+   - get suggestion from him of other resources to read/still from
+   - is tools.anaysers will be usefull for us?
+
+   - Hi, I'm sorry at first I didn't read about how Clojure
+     contribution works, but now I know.  I've signed CA & submitted
+     the typo patch (first ever) To better understand you, I've looked
+     a bit into how ColjureScript compilation process works and also
+     on how go macros are implemented in core.async, though it will
+     take me a very long time to "get it." I have a question that is
+     maybe dumb one, is tools.anayser can be helpfull to us in
+     core.match? I'm currently thinking on how to find rep for matrix
+     patterns as one map that allow us to re-use most of the code
+     logic, is that in right direction?  Thank you :)
+
+     - if we can use clojure specs
+     - @dnolen Hi!  I hope you're feeling better :) Thank you your
+       feedback.  for When I heard about clojure.tools & AST stuff, I
+       was thinking about somehow extending it. But now things are bit
+       more clearer, I think it's bit not straightforward how to do
+       it. I will keep studying it, it's cool how it works and also
+       for inspiration.  Spec'ing the AST will be awesome! I think we
+       can spec our matching syntax will get a a decent rep and maybe
+       after that we can enrich it for our algorithm to get `dag` [at
+       this point it's not clear to me how it will look like, & how
+       code get generated from it] The next days I will spend more
+       time looking in the details & breaking things appart and figure
+       out how to re-use what we have. I hope I'm on right
+       track. @dnolen I have question (maybe it's dumb), since it's
+       important to keep things open for extension, is it also
+       important to preserve to same interface we currently use to
+       extend patterns?
+
+*** irc
+        @dnolen I have signed CA, and submitted typo fix (first patch
+        ever) MATCH-119
+        
 ** thoughts on how to solve it    
-- somehow change the implemntatioon of  IPatternCompile
+- Somehow change the implemntatioon of  IPatternCompile
   in each pattern? -- need to get back to the paper for that.
 - so you loop through the condidtates that comes out form
   SpecializeMatrix (tests) when compiled those gets spit out as
@@ -153,13 +204,142 @@ of matrix, if rows are not of same length?, error?
 - According to the presentation I've watched what it does is: (halgari)
   - clojure code (s-expressoin) -> data represetation -> manipulate
     and stufff (they call them analyser passes)->
-    to-clj -> coljre code again (templating) 
+    to-clj -> clojure code again (templating) 
+
+- I have to find an intermediate representation to compile a match to
+  it... 
+- introduce reader-macros? 
+
+- We currently have patterns represented as `deftypes`, and during the
+  decision tree generation, to specialize matrix on pattern, we pass
+  the whole matrix to that pattern method which knows how to give us
+  an other matrix. We represent pattern matrix as data only, when we
+  need to specialize on it, we can pass to function with other
+  information as second argument (pattern we want to specialize on) to
+  sculpt that data in right way (produce a new matrix rep.)
+
+    NB. we seem to be always specializing on first occurence.
+
+- Remove the redunduncy, there are many functions that we call many
+  times specifically `regroup-keywords`
+
+- pattern matrix will look like this
+
+- dispatch matrix specialization, on the type of pattern in a row
+
+;; {
+;;  :occurences {}
+;;  :rows [{:patterns [] :action} {:patterns [] :action}]
+;;  }
+;; a pattern is {:type :wild-card-pattern :binding  :}
+  
+*** desgin of IR
+;; specializing is mostly about introducing new cols
+;; cols 
+
+;; matrix:
+
+;; occurences: (they only get tested once)
+;; rows vecotr of vectors
+;; 
+
+;; pattern type
+;; 
+
+;; dag
+
+
+;; 
 
 ** to consult:
-   - some data stuff talk (maybe Rich)
+   - some data stuff talk (maybe Rich) / https://www.youtube.com/watch?v=rI8tNMsozo0
    - htdp, has something nice to say about data (check how things done
      there) (Racket maybe)
-   - rich hicky talk (about clojure pro to pro (or somehting like that...)
+   - rich hicky talk (about clojure pro to pro (or somehting like
+     that...)
+   - the magic project
+   - core async & the use of go macro???
+     
+
+** TODO
+- map the macro exampnd result to graph
+- continue reading source code, from pattern emmiting till the
+  compilation
+  - understand how vector-pattern works 
+  patterns though! 
+- [x] get to the bottom of *recur-present*!
+- play with analyser/clojurescript AST stuff...
+- [x] continue reading on dynmique programming aspects...
+- understood better dealy & how it works... (
+ - what's the difference between clj/reader & tools.analyzer.reader? 
+*** read the code 
+** what I've done today:
+- <2017-03-06 Mon>
+  - I've understood what it means to expand matrix
+- <2017-03-07 Tue>
+  - read-up more on prtocols, multimethods, pholymorphism...
+  - java/clojure got more details pinned down.
+<2017-03-08 Wed>
+ - more on polymorphism, protocols quicrks... (we use them heavily
+   here)
+ - proxy/reify once and for all... (hopefully)
+ - clarified the stuff :) great thread
+   https://groups.google.com/forum/#!msg/clojure/pZFl8gj1lMs/qVfIjQ4jDDMJ
+<2017-03-13 Mon>
+- read more about Rich writings on clojure/data structures
+- understood the ants demo
+- checked core.async / didin't understand much :( / probably the one
+  thing i've go is how to generate code based on cases 
+- read the paper more
+- <2017-03-15 Wed>
+  - watched Rich hickey talk on design
+  - read rational/clojure philosphy (clojure.org)
+  - discuessed what I will be focusing on with David
+  - read about AST/clojure.tools.analyzer & stuff
+  - I will be working on
+  - Read wiki on aspect of dynmique programming: polymorishism/reflection/macros/
+  - played a bit with clojure reflection API
+  <2017-03-16 Thu>
+  - better understood lazy-seq (took half day)
+  - spec/ generative testing  (watched 2 takls + screen-cast)
+   <2017-04-16 Thu>
+     :TODO:
+   - read the paper, write the first draft of proposal,
+   - read clojure.spec (on clojure.org) (maybe rewatch Rich talk)
+   - put the other stuff on the quee... (???)
+     :DID:
+    - finished playing & watching Stuart Halloway talk on specre
+    - watched an other talk by Stuart halloway on simplicity &
+      breaking things appart & not conflating & reuse
+<2017-03-18 Sat>
+- investigating on why we use :occurence-type 
+** related-question on clojure
+- Why when we implemented Clojure.lang.IpresistentCollection we only
+  implemented (cons, equiv) but not empty and count, even though we've
+  implemented cons, we can't use it... we have to use conj. And also
+  if if we implement count even without using seq in our
+  implementation we must also implement seq? Why is that!
+
+- Why we can extend some part of protocol/interface?
+- what is proxy class/ and how it relates to the one in Java.. hmm..
+
+
+
+** notes about the code
+*** meta on occurences:
+    - :occurence-type -> any of :seq :vector :map :default
+      :bind-expr (when we  non-symbol expr provided to match macro)
+      :tag
+      :index 
+      ---------
+      :map-sym
+      :key
+      ---------
+      :vec-sym
+*** meta on patterns
+    :as
+    :offset
+    :only 
 ** observations
 - so pretty much every Pattern is a deftype?
   but MapKeyPattern which is a record, why?  
@@ -222,70 +402,67 @@ itself (huh?), and how to produce specialize-matrix
     RestPattern
     MapKeyPattern
 
-** TODO
-- map the macro exampnd result to graph
-- continue reading source code, from pattern emmiting till the compilation
-- locate where we are using 
--[x] understand what emit-pattern really does, check the wiki
--[x] understand ISpecializeMatrix/ still need to check it for other
-  patterns though! 
-
-- get to the bottom of *recur-present*!
-
-
-*** read the code 
-** what I've done today:
-- <2017-03-06 Mon>
-  - I've understood what it means to expand matrix
-- <2017-03-07 Tue>
-  - read-up more on prtocols, multimethods, pholymorphism...
-  - java/clojure got more details pinned down.
-<2017-03-08 Wed>
- - more on polymorphism, protocols quicrks... (we use them heavily
-   here)
- - proxy/reify once and for all... (hopefully)
- - clarified the stuff :) great thread
-   https://groups.google.com/forum/#!msg/clojure/pZFl8gj1lMs/qVfIjQ4jDDMJ
-   
-** related-question on clojure
-- Why when we implemented Clojure.lang.IpresistentCollection we only
- implemented (cons, equiv) but not empty and count, even though we've
-  implemented cons, we can't use it... we have to use conj. And also
-  if if we implement count even without using seq in our
-  implementation we must also implement seq? Why is that!
-- Why we can extend some part of protocol/interface?
-
-- what is proxy class/ and how it relates to the one in Java.. hmm..
-
-** to discuss with David
-   - ask him about recur
-   - provide for him a description of how all things fit together,
-     and if I have understood wrong
-   - suggest if it's possible to do incremental updates, where we
-     start with a simple pattern, support for it the loop compilation
-     before moving to others.
-   - give a comparison of how the code expands now, and how it should
-     after implementing this feature/ also provide pictorial *graph* as
-     per the paper. 
-   - get suggestion from him of other resources to read/still from
-   - 
-* Plan
-  [x]- finish proxy stuff/ (1 hour)
-  - read the code/paper/think.... (2 - 3 hours)
-  -[x...] read the book [1:30 hours ] 
-  - solve some more of 4clojure [1 hour] 
-  [x] finish reading arcticles and stuff on clojure... [45 minutes]
-  - get back to core.match and start writing proposal... / prepare
-    what to discuss with David
-
-- rescue: CLOJURE-PILLS / CHECK TO-WATCH/LISTEN /music/ economist/ 
-  
 * Insigths/day
--   we are on a race, and the only way to get ahead, is to learn (get
-  used) to lead
-  and not follow.
+-  we are on a race, and the only way to get ahead, is to learn (get
+  used) to lead  and not follow.
   
 - I need to look ahead, how the thing should look like, kinda of
   moving forward & then working my way backward.   
 
--
+** design / rich hickey talk
+   - take things appart & put them together 
+   - order, infomration, solution
+   - find the actual problems (needs to problems)
+   - devide -> things I know / things I don't
+   - seperate the cause from the symptoms
+   - unstated requirement (attributes that not supposed to have)
+   - time (order, queues)
+   - 
+
+I want to appologize for not being able to make it to class today, as
+am not feeling too well. I'm sure I've missed some thought provoking
+ideas and intersting discussion. I'm looking forward for next class &
+hope to make it. Thank you.
+
+
+
+
+
+
+
+
+
+* Questions to david 
+- the quirks of *recur-present*
+- if it's possible to use the read-macro for clojurescript-stuff
+- 
+  
+
+
+* Proposal
+** Abstract
+*** stuff
+    the work will be on adapting & refactoring the algorithm
+    functions, to operate on our matrix rep, as it currently depends
+    on the `deftypes` of different. These include pattern scoring to
+    choose a column to specialize on.
+    
+    We will be adapting clojure.spec to parse & check the syntax of
+    our pattern matching macro, this gives us a complete transparent
+    data reprentation of the rows of patterns. This will gives us more
+    flexibility at manipulating and applying our algorithm wihich will
+    result in a decision tree, also will be represented using regular
+    but powerfull clojure data-structures. I think, our work will also
+    be consiting of 3 composable steps (matrix-emssion, takes matrix
+    data from user (macro) and turn in into a rep that get fed to next
+    step, algorithm-application `compile`, which will be be producing
+    DAG rep of clojure code to be generead in the next step.
+
+** timeline
+- work on specifying the specs of what our matching macro 
+  (make sure it's comlete & harmonic)
+- work on adapting our algorithm to our new rep, this include any
+  adding/comuting an neccesary information to our rep that algorithm
+  need it to work in harmony. 
+- 
+**  Delivarables 
